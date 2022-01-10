@@ -39,6 +39,22 @@ func BenchmarkNoise(b *testing.B) {
 	assert.NotZero(b, out)
 }
 
+func BenchmarkDot(b *testing.B) {
+	var out float32
+	b.Run("2d", func(b *testing.B) {
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for n := 0; n < b.N; n++ {
+			for i := uint8(0); i < 100; i++ {
+				out = dot2D(i%12, 10, 20)
+			}
+		}
+	})
+
+	assert.NotZero(b, out)
+}
+
 func TestSimplex_500x500(t *testing.T) {
 	n := 500
 	freq := float32(25)

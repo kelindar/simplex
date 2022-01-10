@@ -1,12 +1,13 @@
 package simplex
 
-import "math"
-
 var (
-	perm   []uint8
-	perm12 []uint8
-	f2     = float32(0.5 * (math.Sqrt(3) - 1))
-	g2     = float32((3 - math.Sqrt(3)) / 6)
+	perm   [512]uint8
+	perm12 [512]uint8
+)
+
+const (
+	f2 = 0.36602542 // float32(0.5 * (math.Sqrt(3) - 1))
+	g2 = 0.21132487 // float32((3 - math.Sqrt(3)) / 6)
 )
 
 var table = []uint8{151, 160, 137, 91, 90, 15,
@@ -23,16 +24,10 @@ var table = []uint8{151, 160, 137, 91, 90, 15,
 	49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
 	138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180}
 
-var gradients2D = []int8{
-	1, 1, -1, 1, 1, -1, -1, -1,
-	1, 0, -1, 0, 1, 0, -1, 0,
-	0, 1, 0, -1, 0, 1, 0, -1,
-}
-
 func init() {
 	for i := 0; i < 512; i++ {
-		perm = append(perm, table[i&255])
-		perm12 = append(perm12, perm[i]%12)
+		perm[i] = table[i&255]
+		perm12[i] = perm[i] % 12
 	}
 }
 
@@ -46,16 +41,15 @@ func Noise2(x, y float32) float32 {
 	i := floor(x + s)
 	j := floor(y + s)
 
+	// Unskew the cell origin back to (x,y) space
 	t := float32(i+j) * g2
-	X0 := float32(i) - t // Unskew the cell origin back to (x,y) space
-	Y0 := float32(j) - t
-	x0 := x - X0 // Unskew the cell origin back to (x,y) space
-	y0 := y - Y0
+	x0 := x - (float32(i) - t)
+	y0 := y - (float32(j) - t)
 
 	// For the 2D case, the simplex shape is an equilateral triangle.
 	// Determine which simplex we are in
-	i1, j1 := 0, 1 // upper triangle
-	if x0 > y0 {   // lower triangle
+	i1, j1 := uint8(0), uint8(1) // upper triangle
+	if x0 > y0 {                 // lower triangle
 		i1 = 1
 		j1 = 0
 	}
@@ -65,15 +59,16 @@ func Noise2(x, y float32) float32 {
 	y1 := y0 - float32(j1) + g2
 
 	// Offsets for middle corner in (x,y) unskewed coords
-	x2 := x0 - 1 + 2*g2
-	y2 := y0 - 1 + 2*g2
+	const g = 2 * g2
+	x2 := x0 - 1 + g
+	y2 := y0 - 1 + g
 
 	// Work out the hashed gradient indices of the three simplex corners
-	ii := i & 255
-	jj := j & 255
-	gi0 := perm12[ii+int(perm[jj])]
-	gi1 := perm12[ii+i1+int(perm[jj+j1])]
-	gi2 := perm12[ii+1+int(perm[jj+1])]
+	ii := uint8(i & 255)
+	jj := uint8(j & 255)
+	gi0 := perm12[ii+perm[jj]]
+	gi1 := perm12[ii+i1+perm[jj+j1]]
+	gi2 := perm12[ii+1+perm[jj+1]]
 
 	// Calculate the contribution from the three corners
 	t0 := 0.5 - x0*x0 - y0*y0
@@ -104,9 +99,28 @@ func Noise2(x, y float32) float32 {
 	return 70.0 * (n0 + n1 + n2)
 }
 
+var gradients2D = [12]uint16{
+	0x0101, // [+1, +1]
+	0xff01, // [-1, +1]
+	0x01ff, // [+1, -1]
+	0xffff, // [-1, -1]
+	0x0100, // [+1, +0]
+	0xff00, // [-1, +0]
+	0x0100, // [+1, +0]
+	0xff00, // [-1, +0]
+	0x0001, // [+0, +1]
+	0x00ff, // [+0, -1]
+	0x0001, // [+0, +1]
+	0x00ff, // [+0, -1]
+}
+
 // dot2D computes dot product with the gradient
 func dot2D(grad uint8, x, y float32) float32 {
-	return float32(gradients2D[grad])*x + float32(gradients2D[grad+1])*y
+	g := gradients2D[grad]
+	gx := float32(int8(g >> 8))
+	gy := float32(int8(g))
+
+	return float32(gx)*x + float32(gy)*y
 }
 
 // floor floors the floating-point value to an integer
@@ -116,4 +130,8 @@ func floor(x float32) int {
 		return v - 1
 	}
 	return v
+}
+
+func min(v1, v2 int32) int32 {
+	return v2 + ((v1 - v2) & ((v1 - v2) >> 31))
 }
