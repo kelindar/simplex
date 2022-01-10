@@ -14,9 +14,9 @@ import (
 
 /*
 cpu: Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz
-BenchmarkNoise/10x10-8         	  763042	      1568 ns/op	       0 B/op	       0 allocs/op
-BenchmarkNoise/100x100-8       	    7402	    159403 ns/op	       0 B/op	       0 allocs/op
-BenchmarkNoise/1000x1000-8     	      74	  15732020 ns/op	       0 B/op	       0 allocs/op
+BenchmarkNoise/2d_10x10-8         	  803395	      1425 ns/op	       0 B/op	       0 allocs/op
+BenchmarkNoise/2d_100x100-8       	    7501	    151338 ns/op	       0 B/op	       0 allocs/op
+BenchmarkNoise/2d_1000x1000-8     	      79	  15063611 ns/op	       0 B/op	       0 allocs/op
 */
 func BenchmarkNoise(b *testing.B) {
 	var out float32
@@ -47,7 +47,7 @@ func BenchmarkDot(b *testing.B) {
 
 		for n := 0; n < b.N; n++ {
 			for i := uint8(0); i < 100; i++ {
-				out = dot2D(i%12, 10, 20)
+				out = dot2D(0xffff, 10, 20)
 			}
 		}
 	})

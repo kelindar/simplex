@@ -1,13 +1,19 @@
 package simplex
 
-var (
-	perm   [512]uint8
-	perm12 [512]uint8
+import (
+	"unsafe"
 )
 
 const (
 	f2 = 0.36602542 // float32(0.5 * (math.Sqrt(3) - 1))
 	g2 = 0.21132487 // float32((3 - math.Sqrt(3)) / 6)
+)
+
+var (
+	perm  [512]uint8
+	grad  [512]uint16
+	pPerm unsafe.Pointer
+	pGrad unsafe.Pointer
 )
 
 var table = []uint8{151, 160, 137, 91, 90, 15,
@@ -25,10 +31,40 @@ var table = []uint8{151, 160, 137, 91, 90, 15,
 	138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180}
 
 func init() {
+	var g2d = [12]uint16{
+		0x0101, // [+1, +1]
+		0xff01, // [-1, +1]
+		0x01ff, // [+1, -1]
+		0xffff, // [-1, -1]
+		0x0100, // [+1, +0]
+		0xff00, // [-1, +0]
+		0x0100, // [+1, +0]
+		0xff00, // [-1, +0]
+		0x0001, // [+0, +1]
+		0x00ff, // [+0, -1]
+		0x0001, // [+0, +1]
+		0x00ff, // [+0, -1]
+	}
+
 	for i := 0; i < 512; i++ {
 		perm[i] = table[i&255]
-		perm12[i] = perm[i] % 12
+		grad[i] = g2d[perm[i]%12]
 	}
+
+	pPerm = unsafe.Pointer(&perm[0])
+	pGrad = unsafe.Pointer(&grad[0])
+}
+
+// permutationsAt loads the three permutation locations for the gradients
+func permutationsAt(idx, center uint16) (uint16, uint16, uint16) {
+	return uint16(*(*uint8)((unsafe.Pointer)(uintptr(pPerm) + uintptr(idx)))),
+		uint16(*(*uint8)((unsafe.Pointer)(uintptr(pPerm) + uintptr(idx+center)))),
+		uint16(*(*uint8)((unsafe.Pointer)(uintptr(pPerm) + uintptr(idx+1))))
+}
+
+// gradientAt loads the pre-calculated 2D gradient from the lookup table
+func gradientAt(idx uint16) uint16 {
+	return *(*uint16)((unsafe.Pointer)(uintptr(pGrad) + 2*uintptr(idx)))
 }
 
 // Noise2 computes a two dimensional simplex noise
@@ -48,8 +84,8 @@ func Noise2(x, y float32) float32 {
 
 	// For the 2D case, the simplex shape is an equilateral triangle.
 	// Determine which simplex we are in
-	i1, j1 := uint8(0), uint8(1) // upper triangle
-	if x0 > y0 {                 // lower triangle
+	i1, j1 := uint16(0), uint16(1) // upper triangle
+	if x0 > y0 {                   // lower triangle
 		i1 = 1
 		j1 = 0
 	}
@@ -64,54 +100,39 @@ func Noise2(x, y float32) float32 {
 	y2 := y0 - 1 + g
 
 	// Work out the hashed gradient indices of the three simplex corners
-	ii := uint8(i & 255)
-	jj := uint8(j & 255)
-	gi0 := perm12[ii+perm[jj]]
-	gi1 := perm12[ii+i1+perm[jj+j1]]
-	gi2 := perm12[ii+1+perm[jj+1]]
+	ii := uint16(i & 255)
+	jj := uint16(j & 255)
+	p0, p1, p2 := permutationsAt(jj, j1)
+	g0 := gradientAt(ii + p0)
+	g1 := gradientAt(ii + i1 + p1)
+	g2 := gradientAt(ii + 1 + p2)
 
 	// Calculate the contribution from the three corners
-	n0 := float32(0.0)
+	n := float32(0.0)
 	if t := 0.5 - x0*x0 - y0*y0; t > 0 {
-		t *= t
-		n0 = t * t * dot2D(gi0, x0, y0)
+		n += pow4(t) * dot2D(g0, x0, y0)
 	}
-
-	n1 := float32(0.0)
 	if t := 0.5 - x1*x1 - y1*y1; t > 0 {
-		t *= t
-		n1 = t * t * dot2D(gi1, x1, y1)
+		n += pow4(t) * dot2D(g1, x1, y1)
 	}
-
-	n2 := float32(0.0)
 	if t := 0.5 - x2*x2 - y2*y2; t > 0 {
-		t *= t
-		n2 = t * t * dot2D(gi2, x2, y2)
+		n += pow4(t) * dot2D(g2, x2, y2)
 	}
 
 	// Add contributions from each corner to get the final noise value.
 	// The result is scaled to return values in the interval [-1,1].
-	return 70.0 * (n0 + n1 + n2)
+	return 70.0 * n
 }
 
-var gradients2D = [12]uint16{
-	0x0101, // [+1, +1]
-	0xff01, // [-1, +1]
-	0x01ff, // [+1, -1]
-	0xffff, // [-1, -1]
-	0x0100, // [+1, +0]
-	0xff00, // [-1, +0]
-	0x0100, // [+1, +0]
-	0xff00, // [-1, +0]
-	0x0001, // [+0, +1]
-	0x00ff, // [+0, -1]
-	0x0001, // [+0, +1]
-	0x00ff, // [+0, -1]
+// pow4 lifts the value to the power of 4
+func pow4(v float32) float32 {
+	v *= v
+	v *= v
+	return v
 }
 
 // dot2D computes dot product with the gradient
-func dot2D(grad uint8, x, y float32) float32 {
-	g := gradients2D[grad]
+func dot2D(g uint16, x, y float32) float32 {
 	gx := float32(int8(g >> 8))
 	gy := float32(int8(g))
 	return gx*x + gy*y
