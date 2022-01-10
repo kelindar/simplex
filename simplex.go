@@ -71,27 +71,22 @@ func Noise2(x, y float32) float32 {
 	gi2 := perm12[ii+1+perm[jj+1]]
 
 	// Calculate the contribution from the three corners
-	t0 := 0.5 - x0*x0 - y0*y0
-	t1 := 0.5 - x1*x1 - y1*y1
-	t2 := 0.5 - x2*x2 - y2*y2
-
 	n0 := float32(0.0)
+	if t := 0.5 - x0*x0 - y0*y0; t > 0 {
+		t *= t
+		n0 = t * t * dot2D(gi0, x0, y0)
+	}
+
 	n1 := float32(0.0)
+	if t := 0.5 - x1*x1 - y1*y1; t > 0 {
+		t *= t
+		n1 = t * t * dot2D(gi1, x1, y1)
+	}
+
 	n2 := float32(0.0)
-
-	if t0 >= 0 {
-		t0 *= t0
-		n0 = t0 * t0 * dot2D(gi0, x0, y0)
-	}
-
-	if t1 >= 0 {
-		t1 *= t1
-		n1 = t1 * t1 * dot2D(gi1, x1, y1)
-	}
-
-	if t2 >= 0 {
-		t2 *= t2
-		n2 = t2 * t2 * dot2D(gi2, x2, y2)
+	if t := 0.5 - x2*x2 - y2*y2; t > 0 {
+		t *= t
+		n2 = t * t * dot2D(gi2, x2, y2)
 	}
 
 	// Add contributions from each corner to get the final noise value.
@@ -119,8 +114,7 @@ func dot2D(grad uint8, x, y float32) float32 {
 	g := gradients2D[grad]
 	gx := float32(int8(g >> 8))
 	gy := float32(int8(g))
-
-	return float32(gx)*x + float32(gy)*y
+	return gx*x + gy*y
 }
 
 // floor floors the floating-point value to an integer
@@ -130,8 +124,4 @@ func floor(x float32) int {
 		return v - 1
 	}
 	return v
-}
-
-func min(v1, v2 int32) int32 {
-	return v2 + ((v1 - v2) & ((v1 - v2) >> 31))
 }
