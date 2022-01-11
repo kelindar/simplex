@@ -14,7 +14,7 @@
 This respository contains an experimental implementation of [simplex noise](https://weber.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf) based on the code from the public domain, found at [weber.itn.liu.se/~stegu/simplexnoise](https://weber.itn.liu.se/~stegu/simplexnoise/SimplexNoise.java). Note that this is not the genuine implementation of [Ken Perlin's simplex noise](https://mrl.cs.nyu.edu/~perlin/noise/) presented at SIGGRAPH 2002.
 
 <p align="center">
-<img width="250" height="250" src="fixtures/500.png" border="0" alt="kelindar/simplex">
+<img width="800" height="800" src="examples/terrain.png" border="0" alt="kelindar/simplex">
 </p>
 
 ## Benchmarks

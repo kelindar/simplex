@@ -1,4 +1,4 @@
-module github.com/kelindar/noise
+module github.com/kelindar/simplex
 
 go 1.17
 
