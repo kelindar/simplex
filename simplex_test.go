@@ -13,10 +13,10 @@ import (
 )
 
 /*
-cpu: Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz
-BenchmarkNoise/2d_10x10-8         	  803395	      1425 ns/op	       0 B/op	       0 allocs/op
-BenchmarkNoise/2d_100x100-8       	    7501	    151338 ns/op	       0 B/op	       0 allocs/op
-BenchmarkNoise/2d_1000x1000-8     	      79	  15063611 ns/op	       0 B/op	       0 allocs/op
+cpu: 13th Gen Intel(R) Core(TM) i7-13700K
+BenchmarkNoise/2d_10x10-24         	 1269060	      1002 ns/op	       0 B/op	       0 allocs/op
+BenchmarkNoise/2d_100x100-24       	   10000	    103023 ns/op	       0 B/op	       0 allocs/op
+BenchmarkNoise/2d_1000x1000-24     	     100	  10407688 ns/op	       0 B/op	       0 allocs/op
 */
 func BenchmarkNoise(b *testing.B) {
 	var out float32
@@ -39,6 +39,10 @@ func BenchmarkNoise(b *testing.B) {
 	assert.NotZero(b, out)
 }
 
+/*
+cpu: 13th Gen Intel(R) Core(TM) i7-13700K
+BenchmarkDot/2d-24 	48869684	        24.60 ns/op	       0 B/op	       0 allocs/op
+*/
 func BenchmarkDot(b *testing.B) {
 	var out float32
 	b.Run("2d", func(b *testing.B) {
