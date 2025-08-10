@@ -77,9 +77,9 @@ func Noise2(x, y float32) float32 {
 	y1 := y0 - j1 + g2
 
 	// Offsets for middle corner in (x,y) unskewed coords
-	const g = 2 * g2
-	x2 := x0 - 1 + g
-	y2 := y0 - 1 + g
+	const g = 2*g2 - 1
+	x2 := x0 + g
+	y2 := y0 + g
 
 	// Work out the hashed gradient indices of the three simplex corners
 	pp := perm[j&255:]
