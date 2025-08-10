@@ -1,19 +1,13 @@
 package simplex
 
-import (
-	"unsafe"
-)
-
 const (
 	f2 = 0.36602542 // float32(0.5 * (math.Sqrt(3) - 1))
 	g2 = 0.21132487 // float32((3 - math.Sqrt(3)) / 6)
 )
 
 var (
-	perm  [512]uint8
-	grad  [512]uint16
-	pPerm unsafe.Pointer
-	pGrad unsafe.Pointer
+	perm [512]uint8
+	grad [512]uint16
 )
 
 var table = []uint8{151, 160, 137, 91, 90, 15,
@@ -50,21 +44,6 @@ func init() {
 		perm[i] = table[i&255]
 		grad[i] = g2d[perm[i]%12]
 	}
-
-	pPerm = unsafe.Pointer(&perm[0])
-	pGrad = unsafe.Pointer(&grad[0])
-}
-
-// permutationsAt loads the three permutation locations for the gradients
-func permutationsAt(idx, center uint16) (uint16, uint16, uint16) {
-	return uint16(*(*uint8)((unsafe.Pointer)(uintptr(pPerm) + uintptr(idx)))),
-		uint16(*(*uint8)((unsafe.Pointer)(uintptr(pPerm) + uintptr(idx+center)))),
-		uint16(*(*uint8)((unsafe.Pointer)(uintptr(pPerm) + uintptr(idx+1))))
-}
-
-// gradientAt loads the pre-calculated 2D gradient from the lookup table
-func gradientAt(idx uint16) uint16 {
-	return *(*uint16)((unsafe.Pointer)(uintptr(pGrad) + 2*uintptr(idx)))
 }
 
 // Noise2 computes a two dimensional simplex noise
@@ -100,12 +79,18 @@ func Noise2(x, y float32) float32 {
 	y2 := y0 - 1 + g
 
 	// Work out the hashed gradient indices of the three simplex corners
-	ii := uint16(i & 255)
-	jj := uint16(j & 255)
-	p0, p1, p2 := permutationsAt(jj, j1)
-	g0 := gradientAt(ii + p0)
-	g1 := gradientAt(ii + i1 + p1)
-	g2 := gradientAt(ii + 1 + p2)
+	ii := int(i & 255)
+	jj := int(j & 255)
+
+	// Prove bounds to the compiler for subsequent indexed loads
+	_ = perm[jj+1]   // jj in [0,255]
+	_ = grad[ii+256] // ii in [0,255]
+	p0 := int(perm[jj])
+	p1 := int(perm[jj+int(j1)])
+	p2 := int(perm[jj+1])
+	g0 := grad[ii+p0]
+	g1 := grad[ii+int(i1)+p1]
+	g2 := grad[ii+1+p2]
 
 	// Calculate the contribution from the three corners
 	n := float32(0.0)
