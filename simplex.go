@@ -10,7 +10,7 @@ var (
 	grad [512][2]float32
 )
 
-var table = []uint8{151, 160, 137, 91, 90, 15,
+var table = [...]uint8{151, 160, 137, 91, 90, 15,
 	131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23,
 	190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33,
 	88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166,
@@ -82,18 +82,14 @@ func Noise2(x, y float32) float32 {
 	y2 := y0 - 1 + g
 
 	// Work out the hashed gradient indices of the three simplex corners
-	ii := int(i & 255)
-	jj := int(j & 255)
-
-	// Use slice windows
-	pp := perm[jj:]
-	gg := grad[ii:]
-	p0 := int(pp[0])
-	p1 := int(pp[int(j1)])
-	p2 := int(pp[1])
-	g0 := gg[p0]
-	g1 := gg[int(i1)+p1]
-	g2 := gg[1+p2]
+	ii := uint8(i & 255)
+	jj := uint8(j & 255)
+	p0 := uint8(perm[jj])
+	p1 := uint8(perm[jj+uint8(j1)])
+	p2 := uint8(perm[jj+1])
+	g0 := grad[ii+p0]
+	g1 := grad[ii+uint8(i1)+p1]
+	g2 := grad[ii+1+p2]
 
 	// Calculate the contribution from the three corners
 	n := float32(0.0)
@@ -115,15 +111,7 @@ func Noise2(x, y float32) float32 {
 // pow4 lifts the value to the power of 4
 func pow4(v float32) float32 {
 	v *= v
-	v *= v
-	return v
-}
-
-// dot2D computes dot product with the gradient
-func dot2D(g uint16, x, y float32) float32 {
-	gx := float32(int8(g >> 8))
-	gy := float32(int8(g))
-	return gx*x + gy*y
+	return v * v
 }
 
 // floor floors the floating-point value to an integer
