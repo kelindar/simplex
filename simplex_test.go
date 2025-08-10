@@ -39,26 +39,6 @@ func BenchmarkNoise(b *testing.B) {
 	assert.NotZero(b, out)
 }
 
-/*
-cpu: 13th Gen Intel(R) Core(TM) i7-13700K
-BenchmarkDot/2d-24 	48869684	        24.60 ns/op	       0 B/op	       0 allocs/op
-*/
-func BenchmarkDot(b *testing.B) {
-	var out float32
-	b.Run("2d", func(b *testing.B) {
-		b.ReportAllocs()
-		b.ResetTimer()
-
-		for n := 0; n < b.N; n++ {
-			for i := uint8(0); i < 100; i++ {
-				out = dot2D(0xffff, 10, 20)
-			}
-		}
-	})
-
-	assert.NotZero(b, out)
-}
-
 func TestSimplex_500x500(t *testing.T) {
 	n := 500
 	freq := float32(25)
