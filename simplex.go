@@ -82,14 +82,14 @@ func Noise2(x, y float32) float32 {
 	y2 := y0 - 1 + g
 
 	// Work out the hashed gradient indices of the three simplex corners
-	ii := uint8(i & 255)
-	jj := uint8(j & 255)
-	p0 := uint8(perm[jj])
-	p1 := uint8(perm[jj+uint8(j1)])
-	p2 := uint8(perm[jj+1])
-	g0 := grad[ii+p0]
-	g1 := grad[ii+uint8(i1)+p1]
-	g2 := grad[ii+1+p2]
+	pp := perm[j&255:]
+	gg := grad[i&255:]
+	p0 := int(pp[0])
+	p1 := int(pp[int(j1)])
+	p2 := int(pp[1])
+	g0 := gg[p0]
+	g1 := gg[int(i1)+p1]
+	g2 := gg[1+p2]
 
 	// Calculate the contribution from the three corners
 	n := float32(0.0)
