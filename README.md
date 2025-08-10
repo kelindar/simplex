@@ -21,9 +21,12 @@ This respository contains an experimental implementation of [simplex noise](http
 
 ```
 cpu: Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz
-BenchmarkNoise/10x10-8       763042   1568 ns/op      0 B/op   0 allocs/op
-BenchmarkNoise/100x100-8     7402     159403 ns/op    0 B/op   0 allocs/op
-BenchmarkNoise/1000x1000-8   74       15732020 ns/op  0 B/op   0 allocs/op
+name                 time/op      ops/s        allocs/op   
+-------------------- ------------ ------------ ------------
+noise 1K (seq)       12.6 ns      79.4M        0           
+noise 1K (rnd)       15.5 ns      64.5M        0           
+noise 1K (circ)      14.8 ns      67.8M        0           
+
 ```
 
 ## Contributing
