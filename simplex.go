@@ -7,7 +7,7 @@ const (
 
 var (
 	perm [512]uint8
-	grad [512]uint16
+	grad [512][2]float32
 )
 
 var table = []uint8{151, 160, 137, 91, 90, 15,
@@ -42,7 +42,10 @@ func init() {
 
 	for i := 0; i < 512; i++ {
 		perm[i] = table[i&255]
-		grad[i] = g2d[perm[i]%12]
+		idx := g2d[perm[i]%12]
+		gx := int8(idx >> 8)
+		gy := int8(idx)
+		grad[i] = [2]float32{float32(gx), float32(gy)}
 	}
 }
 
@@ -63,15 +66,15 @@ func Noise2(x, y float32) float32 {
 
 	// For the 2D case, the simplex shape is an equilateral triangle.
 	// Determine which simplex we are in
-	i1, j1 := uint16(0), uint16(1) // upper triangle
-	if x0 > y0 {                   // lower triangle
+	i1, j1 := float32(0), float32(1) // upper triangle
+	if x0 > y0 {                     // lower triangle
 		i1 = 1
 		j1 = 0
 	}
 
 	// Offsets for middle corner in (x,y) unskewed coords
-	x1 := x0 - float32(i1) + g2
-	y1 := y0 - float32(j1) + g2
+	x1 := x0 - i1 + g2
+	y1 := y0 - j1 + g2
 
 	// Offsets for middle corner in (x,y) unskewed coords
 	const g = 2 * g2
@@ -82,26 +85,26 @@ func Noise2(x, y float32) float32 {
 	ii := int(i & 255)
 	jj := int(j & 255)
 
-	// Prove bounds to the compiler for subsequent indexed loads
-	_ = perm[jj+1]   // jj in [0,255]
-	_ = grad[ii+256] // ii in [0,255]
-	p0 := int(perm[jj])
-	p1 := int(perm[jj+int(j1)])
-	p2 := int(perm[jj+1])
-	g0 := grad[ii+p0]
-	g1 := grad[ii+int(i1)+p1]
-	g2 := grad[ii+1+p2]
+	// Use slice windows
+	pp := perm[jj:]
+	gg := grad[ii:]
+	p0 := int(pp[0])
+	p1 := int(pp[int(j1)])
+	p2 := int(pp[1])
+	g0 := gg[p0]
+	g1 := gg[int(i1)+p1]
+	g2 := gg[1+p2]
 
 	// Calculate the contribution from the three corners
 	n := float32(0.0)
 	if t := 0.5 - x0*x0 - y0*y0; t > 0 {
-		n += pow4(t) * dot2D(g0, x0, y0)
+		n += pow4(t) * (g0[0]*x0 + g0[1]*y0)
 	}
 	if t := 0.5 - x1*x1 - y1*y1; t > 0 {
-		n += pow4(t) * dot2D(g1, x1, y1)
+		n += pow4(t) * (g1[0]*x1 + g1[1]*y1)
 	}
 	if t := 0.5 - x2*x2 - y2*y2; t > 0 {
-		n += pow4(t) * dot2D(g2, x2, y2)
+		n += pow4(t) * (g2[0]*x2 + g2[1]*y2)
 	}
 
 	// Add contributions from each corner to get the final noise value.
